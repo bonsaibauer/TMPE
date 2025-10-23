@@ -98,6 +98,25 @@ There are several build configurations, but we mostly use just three:
    * Right-click **TLM** project in **Solution Explorer** and choose **Build**
    * Or, **Build > Build Solution** (shortcut: `F6`)
 
+#### PowerShell helper scripts
+
+If you prefer building from the command line, the repository ships with a set of PowerShell scripts in `TLM/scripts` that wrap the
+common steps:
+
+* `pwsh .\TLM\scripts\update.ps1` – restores NuGet packages (downloads `nuget.exe` if necessary) and updates submodules.
+* `pwsh .\TLM\scripts\build.ps1 -Configuration Debug` – restores dependencies (unless `-NoRestore` is supplied) and runs
+  `MSBuild` for the requested configuration.
+* `pwsh .\TLM\scripts\install.ps1 -Configuration Release -Destination "C:\\Users\\<you>\\AppData\\Local\\Colossal Order\\Cities_Skylines\\Addons\\Mods\\TMPE"`
+  – builds the project and mirrors the resulting DLLs to the specified mod directory. Pass `-NoBuild` if you only want to copy an
+  existing build.
+
+These helpers are especially useful when using Visual Studio Code or any other lightweight editor, because they make sure the
+required analyzer packages are restored before invoking `MSBuild`.
+
+If you embed TM:PE as a Git submodule in another project, you can also dot-source `TLM/scripts/common.ps1` and call the exported
+functions (`Invoke-TmpeRestore`, `Invoke-TmpeBuild`, `Invoke-TmpeInstall`) from your own PowerShell automation. This lets you
+trigger TM:PE updates or builds as part of a larger workflow without relying on shelling out to the individual helper scripts.
+
 #### Testing:
 
 The built DLL files are automatically copied over to the local mods folder of the game if the build is successful. If not, check the post-build events for the `TLM` project.
