@@ -98,6 +98,32 @@ There are several build configurations, but we mostly use just three:
    * Right-click **TLM** project in **Solution Explorer** and choose **Build**
    * Or, **Build > Build Solution** (shortcut: `F6`)
 
+#### PowerShell helper scripts
+
+If you prefer building from the command line, the repository ships with a set of PowerShell scripts in `TLM/scripts` that wrap the
+common steps:
+
+* `pwsh .\TLM\scripts\update.ps1 -ManagedDllDir "C:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed"` – restores NuGet packages (downloads `nuget.exe` if necessary), updates submodules, and copies the managed Cities: Skylines assemblies into `TLM\dependencies` for subsequent builds. Once the DLLs are cached you can omit the `-ManagedDllDir` argument.
+* `pwsh .\TLM\scripts\build.ps1 -Configuration Debug -UseDotNet` – restores dependencies (unless `-NoRestore` is supplied) and runs the build using the .NET SDK (`dotnet msbuild`). Omit `-UseDotNet` to prefer the classic `MSBuild.exe`. Supply `-ManagedDllDir` to refresh the cached assemblies from a particular game install, or set the `TMPE_MANAGED_DLL_DIR` environment variable to make the location persistent.
+* `pwsh .\TLM\scripts\install.ps1 -Configuration Release -Destination "C:\Users\<you>\AppData\Local\Colossal Order\Cities_Skylines\Addons\Mods\TMPE" -UseDotNet` – builds the project (unless `-NoBuild` is supplied) and mirrors the resulting DLLs to the specified mod directory. Pass `-NoBuild` if you only want to copy an existing build. The command accepts the same `-ManagedDllDir` parameter as `build.ps1`.
+
+These helpers are especially useful when using Visual Studio Code or any other lightweight editor, because they make sure the
+required analyzer packages are restored before invoking `MSBuild` or `dotnet`.
+
+The scripts automatically download the `.NET Framework 3.5` reference assemblies (via the NuGet package `Microsoft.NETFramework.ReferenceAssemblies.net35`) whenever they are not available locally, which allows `dotnet msbuild` to compile the solution even on systems without Visual Studio installed. If you have a custom reference pack location, point the `TMPE_NET35_REFERENCE_DIR` environment variable at the folder that contains `mscorlib.dll`.
+
+Set `TMPE_USE_DOTNET=1` to make the `dotnet` toolchain the default for all script invocations. You can still force the classic toolchain on demand by passing `-UseDotNet:$false`.
+
+If the helpers detect that the managed Cities: Skylines assemblies are missing from the configured location, the build stops with
+an explicit reminder to follow the **Managed DLLs** section below. Point `-ManagedDllDir` (or `TMPE_MANAGED_DLL_DIR`) to your
+`Cities_Data/Managed` folder—or mirror those files into `TLM/dependencies` using `update.ps1`—to proceed.
+
+If you embed TM:PE as a Git submodule in another project, you can also dot-source `TLM/scripts/common.ps1` and call the exported
+functions (`Invoke-TmpeRestore`, `Invoke-TmpeBuild`, `Invoke-TmpeInstall`) from your own PowerShell automation. Each helper accepts
+an optional `ManagedDllDir` argument, mirroring the script parameters, so you can inject the path to your managed assemblies before
+triggering a build. This lets you trigger TM:PE updates or builds as part of a larger workflow without relying on shelling out to
+the individual helper scripts.
+
 #### Testing:
 
 The built DLL files are automatically copied over to the local mods folder of the game if the build is successful. If not, check the post-build events for the `TLM` project.
