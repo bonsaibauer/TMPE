@@ -41,6 +41,7 @@ if ([string]::IsNullOrWhiteSpace($gitRoot)) {
 
 $Script:RepoRoot = [string]$gitRoot
 $Script:ToolsDir = Join-Path $Script:RepoRoot '.tools'
+$Script:PackagesDir = Join-Path (Join-Path $Script:RepoRoot 'TLM') 'packages'
 
 function Get-RepoRoot {
     return $Script:RepoRoot
@@ -52,6 +53,14 @@ function Get-ToolsDir {
     }
 
     return $Script:ToolsDir
+}
+
+function Get-PackagesDir {
+    if (-not (Test-Path $Script:PackagesDir)) {
+        New-Item -Path $Script:PackagesDir -ItemType Directory | Out-Null
+    }
+
+    return $Script:PackagesDir
 }
 
 function Get-NuGetExePath {
@@ -113,7 +122,18 @@ function Invoke-NuGetRestore {
     }
 
     $nugetExe = Ensure-NuGetExe
-    $arguments = @('restore', $SolutionPath, '-NonInteractive')
+    $packagesDir = Get-PackagesDir
+    $solutionDir = Split-Path -Parent $SolutionPath
+
+    $arguments = @(
+        'restore',
+        $SolutionPath,
+        '-NonInteractive',
+        '-PackagesDirectory',
+        $packagesDir,
+        '-SolutionDirectory',
+        $solutionDir
+    )
     $result = & $nugetExe @arguments
     if ($LASTEXITCODE -ne 0) {
         throw 'NuGet restore failed.'
