@@ -3,7 +3,43 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$Script:RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
+$resolvedScriptRoot = Resolve-Path $PSScriptRoot
+$candidate = $resolvedScriptRoot
+$gitRoot = $null
+
+while ($candidate -and (-not $gitRoot)) {
+    if (Test-Path (Join-Path $candidate '.git')) {
+        $gitRoot = $candidate
+        break
+    }
+
+    $parent = Split-Path -Parent $candidate
+    if ([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $candidate) {
+        break
+    }
+
+    $candidate = $parent
+}
+
+if (-not $gitRoot) {
+    $fallbackParent = Resolve-Path (Join-Path $resolvedScriptRoot '..')
+    if ($fallbackParent) {
+        $fallback = Join-Path $fallbackParent '..'
+        if (Test-Path $fallback) {
+            $gitRoot = Resolve-Path $fallback
+        }
+        else {
+            $gitRoot = $fallbackParent
+        }
+    }
+}
+
+$gitRoot = [string]$gitRoot
+if ([string]::IsNullOrWhiteSpace($gitRoot)) {
+    throw 'Unable to determine the TM:PE repository root.'
+}
+
+$Script:RepoRoot = [string]$gitRoot
 $Script:ToolsDir = Join-Path $Script:RepoRoot '.tools'
 
 function Get-RepoRoot {
