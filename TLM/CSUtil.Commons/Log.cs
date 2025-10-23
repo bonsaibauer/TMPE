@@ -37,6 +37,8 @@ namespace CSUtil.Commons {
     /// Log.NotImpl logs an error if something is not implemented and only in debug mode
     /// </summary>
     public static class Log {
+        internal delegate string LogMessageProvider();
+
         private static readonly object LogLock = new object();
 
         private const string LOG_FILE_NAME = "TMPE.log";
@@ -116,7 +118,7 @@ namespace CSUtil.Commons {
         /// <param name="formatFn">The function which returns text to log</param>
         // TODO: Add log thread and replace formatted strings with lists to perform late formatting in that thread
         [Conditional("DEBUG")]
-        public static void _DebugIf(bool cond, Func<string> formatFn) {
+        public static void _DebugIf(bool cond, LogMessageProvider formatFn) {
             if (cond) {
                 LogToFile(formatFn(), LogLevel.Debug);
             }
@@ -152,7 +154,7 @@ namespace CSUtil.Commons {
         /// <param name="cond">The condition</param>
         /// <param name="formatFn">The function which returns text to log</param>
         [Conditional("DEBUG")]
-        public static void _DebugOnlyWarningIf(bool cond, Func<string> formatFn) {
+        public static void _DebugOnlyWarningIf(bool cond, LogMessageProvider formatFn) {
             if (cond) {
                 LogToFile(formatFn(), LogLevel.Warning);
             }
