@@ -5,8 +5,14 @@
     <TMPEManagedPath Condition="'$(TMPEManagedPath)' == '' and Exists('$(MSBuildThisFileDirectory)dependencies')">$(MSBuildThisFileDirectory)dependencies</TMPEManagedPath>
     <TMPEModOutputPath Condition="'$(TMPEModOutputPath)' == '' and '$(TMPE_MOD_OUTPUT_PATH)' != ''">$(TMPE_MOD_OUTPUT_PATH)</TMPEModOutputPath>
     <TMPEModOutputPath Condition="'$(TMPEModOutputPath)' == '' and '$(LOCALAPPDATA)' != ''">$(LOCALAPPDATA)\Colossal Order\Cities_Skylines\Addons\Mods\TMPE</TMPEModOutputPath>
+    <EnableFrameworkPathOverride>true</EnableFrameworkPathOverride>
+    <DisableFrameworkPathCache>true</DisableFrameworkPathCache>
+    <NET35ReferenceAssembliesRoot Condition="'$(NET35ReferenceAssembliesRoot)' == '' and '$(NuGetPackageRoot)' != ''">$(NuGetPackageRoot)microsoft.netframework.referenceassemblies.net35\1.0.3\build\.NETFramework\v3.5\</NET35ReferenceAssembliesRoot>
+    <NET35ReferenceAssembliesRoot Condition="'$(NET35ReferenceAssembliesRoot)' == '' and '$(USERPROFILE)' != ''">$(USERPROFILE)\.nuget\packages\microsoft.netframework.referenceassemblies.net35\1.0.3\build\.NETFramework\v3.5\</NET35ReferenceAssembliesRoot>
+    <FrameworkPathOverride Condition="'$(FrameworkPathOverride)' == '' and '$(TargetFrameworkVersion)' == 'v3.5' and Exists('$(NET35ReferenceAssembliesRoot)mscorlib.dll')">$(NET35ReferenceAssembliesRoot)</FrameworkPathOverride>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net35" Version="1.0.3" PrivateAssets="All" />
   </ItemGroup>
 </Project>
