@@ -42,6 +42,7 @@ if ([string]::IsNullOrWhiteSpace($gitRoot)) {
 $Script:RepoRoot = [string]$gitRoot
 $Script:ToolsDir = Join-Path $Script:RepoRoot '.tools'
 $Script:PackagesDir = Join-Path (Join-Path $Script:RepoRoot 'TLM') 'packages'
+$Script:DependenciesDir = Join-Path (Join-Path $Script:RepoRoot 'TLM') 'dependencies'
 $Script:NuGetCacheDir = Join-Path $Script:ToolsDir 'nuget-cache'
 $Script:DefaultManagedDllDir = Join-Path (Join-Path $Script:RepoRoot 'TLM') 'dependencies'
 $Script:ManagedDllDirectory = $null
@@ -72,6 +73,14 @@ function Get-PackagesDir {
     }
 
     return $Script:PackagesDir
+}
+
+function Get-DependenciesDir {
+    if (-not (Test-Path $Script:DependenciesDir)) {
+        New-Item -Path $Script:DependenciesDir -ItemType Directory | Out-Null
+    }
+
+    return $Script:DependenciesDir
 }
 
 function Ensure-NuGetEnvironment {
@@ -156,7 +165,7 @@ function Test-ManagedDllAvailability {
 function Ensure-ManagedDllAvailability {
     $status = Test-ManagedDllAvailability
     if (-not $status.Directory) {
-        return $null
+        throw "Managed Cities: Skylines assemblies were not found. Run 'pwsh .\\TLM\\scripts\\update.ps1 -ManagedDllDir \"<path to Cities_Data\\Managed>\"' or copy the DLLs to 'TLM\\dependencies'."
     }
 
     if ($status.Missing.Count -gt 0) {
@@ -165,6 +174,34 @@ function Ensure-ManagedDllAvailability {
     }
 
     return $status.Directory
+}
+
+function Sync-ManagedAssemblies {
+    param(
+        [string]$SourceDir
+    )
+
+    if ([string]::IsNullOrWhiteSpace($SourceDir)) {
+        return
+    }
+
+    $resolvedSource = Resolve-Path -LiteralPath $SourceDir -ErrorAction Stop
+    $resolvedSource = [string]$resolvedSource
+
+    foreach ($name in $Script:ManagedDllFileNames) {
+        $candidate = Join-Path $resolvedSource $name
+        if (-not (Test-Path $candidate)) {
+            throw "Managed assembly '$name' was not found in '$resolvedSource'."
+        }
+    }
+
+    $destination = Get-DependenciesDir
+    foreach ($name in $Script:ManagedDllFileNames) {
+        Copy-Item -LiteralPath (Join-Path $resolvedSource $name) -Destination (Join-Path $destination $name) -Force
+    }
+
+    Write-Host "[TMPE] Copied managed assemblies from '$resolvedSource' to '$destination'."
+    Set-ManagedDllDirectory -Path $destination
 }
 
 function New-MSBuildPropertyArgument {
@@ -224,7 +261,8 @@ function Invoke-GitSubmoduleUpdate {
 function Invoke-NuGetRestore {
     param(
         [string]$SolutionPath,
-        [switch]$NoSubmoduleUpdate
+        [switch]$NoSubmoduleUpdate,
+        [string]$ManagedDllDir
     )
 
     if (-not (Test-Path $SolutionPath)) {
@@ -233,6 +271,10 @@ function Invoke-NuGetRestore {
 
     if (-not $NoSubmoduleUpdate) {
         Invoke-GitSubmoduleUpdate -Init
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ManagedDllDir)) {
+        Sync-ManagedAssemblies -SourceDir $ManagedDllDir
     }
 
     Ensure-NuGetEnvironment
@@ -387,14 +429,15 @@ function Copy-BuildOutput {
 function Invoke-TmpeRestore {
     param(
         [switch]$NoSubmoduleUpdate,
-        [string]$SolutionPath
+        [string]$SolutionPath,
+        [string]$ManagedDllDir
     )
 
     if ([string]::IsNullOrWhiteSpace($SolutionPath)) {
         $SolutionPath = Get-SolutionPath -RelativePath 'TMPE.sln'
     }
 
-    Invoke-NuGetRestore -SolutionPath $SolutionPath -NoSubmoduleUpdate:$NoSubmoduleUpdate | Out-Null
+    Invoke-NuGetRestore -SolutionPath $SolutionPath -NoSubmoduleUpdate:$NoSubmoduleUpdate -ManagedDllDir $ManagedDllDir | Out-Null
 }
 
 function Invoke-TmpeBuild {
@@ -406,12 +449,11 @@ function Invoke-TmpeBuild {
         [string]$ManagedDllDir
     )
 
-    if (-not [string]::IsNullOrWhiteSpace($ManagedDllDir)) {
-        Set-ManagedDllDirectory -Path $ManagedDllDir
-    }
-
     if (-not $NoRestore) {
-        Invoke-TmpeRestore -NoSubmoduleUpdate:$NoSubmoduleUpdate -SolutionPath $SolutionPath
+        Invoke-TmpeRestore -NoSubmoduleUpdate:$NoSubmoduleUpdate -SolutionPath $SolutionPath -ManagedDllDir $ManagedDllDir
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($ManagedDllDir)) {
+        Sync-ManagedAssemblies -SourceDir $ManagedDllDir
     }
 
     if ([string]::IsNullOrWhiteSpace($SolutionPath)) {

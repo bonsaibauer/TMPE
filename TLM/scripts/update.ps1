@@ -1,9 +1,10 @@
 param(
-    [switch]$NoSubmoduleUpdate
+    [switch]$NoSubmoduleUpdate,
+    [string]$ManagedDllDir
 )
 
 . "$PSScriptRoot/common.ps1"
 
-Invoke-TmpeRestore -NoSubmoduleUpdate:$NoSubmoduleUpdate
+Invoke-TmpeRestore -NoSubmoduleUpdate:$NoSubmoduleUpdate -ManagedDllDir $ManagedDllDir
 
 Write-Host '[TMPE] Dependencies restored successfully.'
