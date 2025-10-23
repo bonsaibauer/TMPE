@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup Condition="'$(TMPEManagedPath)' != ''">
+    <ReferencePath>$(ReferencePath);$(TMPEManagedPath)</ReferencePath>
+    <MangedDLLPath>$(TMPEManagedPath)</MangedDLLPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TMPEModOutputPath)' != '' and '$(MSBuildProjectName)' == 'TLM'">
+    <OutputPath>$(TMPEModOutputPath)\</OutputPath>
+  </PropertyGroup>
+</Project>

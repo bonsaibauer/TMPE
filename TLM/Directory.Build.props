@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <TMPEManagedPath Condition="'$(TMPEManagedPath)' == '' and '$(TMPE_MANAGED_PATH)' != ''">$(TMPE_MANAGED_PATH)</TMPEManagedPath>
+    <TMPEManagedPath Condition="'$(TMPEManagedPath)' == '' and '$(ProgramFiles(x86))' != '' and Exists('$(ProgramFiles(x86))\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed')">$(ProgramFiles(x86))\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed</TMPEManagedPath>
+    <TMPEManagedPath Condition="'$(TMPEManagedPath)' == '' and Exists('$(MSBuildThisFileDirectory)dependencies')">$(MSBuildThisFileDirectory)dependencies</TMPEManagedPath>
+    <TMPEModOutputPath Condition="'$(TMPEModOutputPath)' == '' and '$(TMPE_MOD_OUTPUT_PATH)' != ''">$(TMPE_MOD_OUTPUT_PATH)</TMPEModOutputPath>
+    <TMPEModOutputPath Condition="'$(TMPEModOutputPath)' == '' and '$(LOCALAPPDATA)' != ''">$(LOCALAPPDATA)\Colossal Order\Cities_Skylines\Addons\Mods\TMPE</TMPEModOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+  </ItemGroup>
+</Project>
