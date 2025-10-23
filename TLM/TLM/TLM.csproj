@@ -89,11 +89,11 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="CitiesHarmony.API, Version=2.0.0.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\packages\CitiesHarmony.API.2.0.0\lib\net35\CitiesHarmony.API.dll</HintPath>
+      <HintPath>$(NuGetPackageRoot)citiesharmony.api\2.0.0\lib\net35\CitiesHarmony.API.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="CitiesHarmony.Harmony, Version=2.0.4.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\packages\CitiesHarmony.Harmony.2.0.4\lib\net35\CitiesHarmony.Harmony.dll</HintPath>
+      <HintPath>$(NuGetPackageRoot)citiesharmony.harmony\2.0.4\lib\net35\CitiesHarmony.Harmony.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="ColossalManaged">
@@ -114,7 +114,7 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml" />
     <Reference Include="UnifiedUILib, Version=2.2.12.31246, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\UnifiedUILib.2.2.12\lib\net35\UnifiedUILib.dll</HintPath>
+      <HintPath>$(NuGetPackageRoot)unifieduilib\2.2.12\lib\net35\UnifiedUILib.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>$(MangedDLLPath)\UnityEngine.dll</HintPath>
@@ -913,13 +913,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Analyzer Include="..\packages\Microsoft.Unity.Analyzers.1.13.0\analyzers\dotnet\cs\Microsoft.Unity.Analyzers.dll" />
-    <Analyzer Include="..\packages\ReflectionIT.Analyzer.Structs.0.1.0\analyzers\dotnet\cs\ReflectionIT.Analyzer.Structs.dll" />
-    <Analyzer Include="..\packages\StyleCop.Analyzers.1.1.118\analyzers\dotnet\cs\StyleCop.Analyzers.CodeFixes.dll" />
-    <Analyzer Include="..\packages\StyleCop.Analyzers.1.1.118\analyzers\dotnet\cs\StyleCop.Analyzers.dll" />
+    <PackageReference Include="CitiesHarmony.API" Version="2.0.0" />
+    <PackageReference Include="CitiesHarmony.Harmony" Version="2.0.4" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net35" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.13.0" PrivateAssets="all" />
+    <PackageReference Include="ReflectionIT.Analyzer.Structs" Version="0.1.0" PrivateAssets="all" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.118" PrivateAssets="all" />
+    <PackageReference Include="UnifiedUILib" Version="2.2.12" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Traffic\Data\" />
