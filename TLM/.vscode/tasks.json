@@ -1,0 +1,81 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vscode/master/src/vs/workbench/contrib/tasks/common/tasks.schema.json",
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Restore TMPE packages.config dependencies",
+      "type": "shell",
+      "command": "nuget",
+      "args": [
+        "restore",
+        "TMPE.sln",
+        "-NonInteractive",
+        "-Verbosity",
+        "minimal"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Restore TMPE project assets",
+      "type": "shell",
+      "command": "msbuild",
+      "args": [
+        "TMPE.sln",
+        "/t:Restore"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Build TMPE Debug",
+      "type": "shell",
+      "command": "msbuild",
+      "args": [
+        "TMPE.sln",
+        "/t:Build",
+        "/p:Configuration=Debug",
+        "/p:Platform=Any CPU",
+        "/m"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "dependsOn": [
+        "Restore TMPE packages.config dependencies",
+        "Restore TMPE project assets"
+      ],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "Build TMPE Release",
+      "type": "shell",
+      "command": "msbuild",
+      "args": [
+        "TMPE.sln",
+        "/t:Build",
+        "/p:Configuration=Release",
+        "/p:Platform=Any CPU",
+        "/m"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "dependsOn": [
+        "Restore TMPE packages.config dependencies",
+        "Restore TMPE project assets"
+      ],
+      "dependsOrder": "sequence"
+    }
+  ]
+}

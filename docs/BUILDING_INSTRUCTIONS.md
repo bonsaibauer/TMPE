@@ -90,6 +90,27 @@ There are several build configurations, but we mostly use just three:
    * Right-click **TLM** project in **Solution Explorer** and choose **Build**
    * Or, **Build > Build Solution** (shortcut: `Ctrl` + `Shift` + `B`)
 
+#### From command line with `msbuild.exe`:
+
+* Open a **Developer Command Prompt for Visual Studio** (this makes sure the correct `msbuild.exe` and .NET Framework 3.5 targets are on the `PATH`).
+* If you haven't already, set the optional environment variables used by the build:
+   * `TMPE_MANAGED_PATH` → points to `Cities_Data\Managed` (for example: `set TMPE_MANAGED_PATH=C:\Games\Cities Skylines\Cities_Data\Managed`).
+   * `TMPE_MOD_OUTPUT_PATH` → points to the folder where the built mod should be copied (for example: `set TMPE_MOD_OUTPUT_PATH=%LOCALAPPDATA%\Colossal Order\Cities_Skylines\Addons\Mods\TMPE`).
+   * These only need to be set once per shell session; if they are omitted MSBuild falls back to the defaults described below.
+* Restore NuGet packages (the solution mixes legacy `packages.config` and modern `PackageReference` restores, so run both commands in this order):
+  ```powershell
+  nuget restore TMPE.sln -NonInteractive
+  msbuild TMPE.sln /t:Restore
+  ```
+  The `nuget` command downloads analyzer packages (for example StyleCop) into the local `packages` folder, while the `msbuild` command generates assets for projects that use `PackageReference`.
+  If `nuget` is not on your `PATH`, use the full path to `nuget.exe` (it is installed with Visual Studio and the standalone Build Tools).
+* Build the solution with your desired configuration (replace `Debug` with `Release` or `Release LABS` when needed):
+  ```powershell
+  msbuild TMPE.sln /p:Configuration=Debug /p:Platform="Any CPU" /m
+  ```
+  The `/m` flag enables parallel builds which speeds things up on multi-core CPUs.
+* When `TMPE_MOD_OUTPUT_PATH` is set (or when the default `%LOCALAPPDATA%\Colossal Order\Cities_Skylines\Addons\Mods\TMPE` exists) the `TrafficManager.dll` and companion files are copied there automatically after a successful build. Otherwise they are left in the standard `TLM\bin\Debug` (or matching configuration) folder and can be copied manually.
+
 #### In JetBrains Rider:
 
 * Choose desired build configuration
