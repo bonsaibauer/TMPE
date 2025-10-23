@@ -43,6 +43,16 @@ $Script:RepoRoot = [string]$gitRoot
 $Script:ToolsDir = Join-Path $Script:RepoRoot '.tools'
 $Script:PackagesDir = Join-Path (Join-Path $Script:RepoRoot 'TLM') 'packages'
 $Script:NuGetCacheDir = Join-Path $Script:ToolsDir 'nuget-cache'
+$Script:DefaultManagedDllDir = Join-Path (Join-Path $Script:RepoRoot 'TLM') 'dependencies'
+$Script:ManagedDllDirectory = $null
+$Script:ManagedDllFileNames = @(
+    'Assembly-CSharp.dll',
+    'ColossalManaged.dll',
+    'ICities.dll',
+    'UnityEngine.dll',
+    'UnityEngine.Networking.dll',
+    'UnityEngine.UI.dll'
+)
 
 function Get-RepoRoot {
     return $Script:RepoRoot
@@ -81,6 +91,94 @@ function Ensure-NuGetEnvironment {
 
 function Get-NuGetExePath {
     return Join-Path (Get-ToolsDir) 'nuget.exe'
+}
+
+function Set-ManagedDllDirectory {
+    param(
+        [string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        $Script:ManagedDllDirectory = $null
+        return
+    }
+
+    $resolved = Resolve-Path -LiteralPath $Path -ErrorAction Stop
+    $Script:ManagedDllDirectory = [string]$resolved
+}
+
+function Get-ManagedDllDirectory {
+    if ($Script:ManagedDllDirectory) {
+        return $Script:ManagedDllDirectory
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:TMPE_MANAGED_DLL_DIR)) {
+        try {
+            $resolved = Resolve-Path -LiteralPath $env:TMPE_MANAGED_DLL_DIR -ErrorAction Stop
+            $Script:ManagedDllDirectory = [string]$resolved
+            return $Script:ManagedDllDirectory
+        }
+        catch {
+        }
+    }
+
+    if (Test-Path $Script:DefaultManagedDllDir) {
+        $Script:ManagedDllDirectory = [string](Resolve-Path $Script:DefaultManagedDllDir)
+        return $Script:ManagedDllDirectory
+    }
+
+    return $null
+}
+
+function Test-ManagedDllAvailability {
+    $directory = Get-ManagedDllDirectory
+    if (-not $directory) {
+        return [pscustomobject]@{
+            Directory = $null
+            Missing   = $Script:ManagedDllFileNames
+        }
+    }
+
+    $missing = @()
+    foreach ($name in $Script:ManagedDllFileNames) {
+        $candidate = Join-Path $directory $name
+        if (-not (Test-Path $candidate)) {
+            $missing += $name
+        }
+    }
+
+    return [pscustomobject]@{
+        Directory = $directory
+        Missing   = $missing
+    }
+}
+
+function Ensure-ManagedDllAvailability {
+    $status = Test-ManagedDllAvailability
+    if (-not $status.Directory) {
+        return $null
+    }
+
+    if ($status.Missing.Count -gt 0) {
+        $missingList = $status.Missing -join ', '
+        throw "Managed assembly directory '$($status.Directory)' is missing the following files: $missingList. See docs/BUILDING_INSTRUCTIONS.md for setup steps."
+    }
+
+    return $status.Directory
+}
+
+function New-MSBuildPropertyArgument {
+    param(
+        [string]$Name,
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Name) -or [string]::IsNullOrWhiteSpace($Value)) {
+        return $null
+    }
+
+    $escaped = $Value.Replace('"', '""')
+    return "/p:$Name=\"$escaped\""
 }
 
 function Ensure-NuGetExe {
@@ -203,18 +301,31 @@ function Invoke-MSBuild {
     }
 
     Ensure-NuGetEnvironment
+    $managedDllDir = Ensure-ManagedDllAvailability
     $msbuild = Get-MSBuildPath
     Write-Host "[TMPE] Running MSBuild from '$msbuild'"
     $packagesDir = Get-PackagesDir
     $args = @(
         $SolutionPath,
-        "/t:$Target",
-        "/p:Configuration=$Configuration",
-        "/p:RestorePackagesPath=$packagesDir",
-        "/p:NuGetPackageRoot=$packagesDir",
-        '/m',
-        "/v:$Verbosity"
+        "/t:$Target"
     )
+
+    $propertyArgs = @()
+    $propertyArgs += New-MSBuildPropertyArgument -Name 'Configuration' -Value $Configuration
+    $propertyArgs += New-MSBuildPropertyArgument -Name 'RestorePackagesPath' -Value $packagesDir
+    $propertyArgs += New-MSBuildPropertyArgument -Name 'NuGetPackageRoot' -Value $packagesDir
+    if ($managedDllDir) {
+        $propertyArgs += New-MSBuildPropertyArgument -Name 'MangedDLLPath' -Value $managedDllDir
+    }
+
+    foreach ($propertyArg in $propertyArgs) {
+        if ($propertyArg) {
+            $args += $propertyArg
+        }
+    }
+
+    $args += '/m'
+    $args += "/v:$Verbosity"
     $result = & $msbuild @args
     if ($LASTEXITCODE -ne 0) {
         throw 'MSBuild failed. Inspect the output above for details.'
@@ -291,8 +402,13 @@ function Invoke-TmpeBuild {
         [string]$Configuration = 'Debug',
         [switch]$NoRestore,
         [switch]$NoSubmoduleUpdate,
-        [string]$SolutionPath
+        [string]$SolutionPath,
+        [string]$ManagedDllDir
     )
+
+    if (-not [string]::IsNullOrWhiteSpace($ManagedDllDir)) {
+        Set-ManagedDllDirectory -Path $ManagedDllDir
+    }
 
     if (-not $NoRestore) {
         Invoke-TmpeRestore -NoSubmoduleUpdate:$NoSubmoduleUpdate -SolutionPath $SolutionPath
@@ -319,7 +435,8 @@ function Invoke-TmpeInstall {
         [switch]$NoBuild,
         [switch]$NoRestore,
         [switch]$NoSubmoduleUpdate,
-        [string]$SolutionPath
+        [string]$SolutionPath,
+        [string]$ManagedDllDir
     )
 
     if ($NoBuild) {
@@ -329,7 +446,7 @@ function Invoke-TmpeInstall {
         }
     }
     else {
-        $outputPath = Invoke-TmpeBuild -Configuration $Configuration -NoRestore:$NoRestore -NoSubmoduleUpdate:$NoSubmoduleUpdate -SolutionPath $SolutionPath
+        $outputPath = Invoke-TmpeBuild -Configuration $Configuration -NoRestore:$NoRestore -NoSubmoduleUpdate:$NoSubmoduleUpdate -SolutionPath $SolutionPath -ManagedDllDir $ManagedDllDir
     }
 
     if ([string]::IsNullOrWhiteSpace($Destination)) {
