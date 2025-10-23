@@ -42,6 +42,7 @@ if ([string]::IsNullOrWhiteSpace($gitRoot)) {
 $Script:RepoRoot = [string]$gitRoot
 $Script:ToolsDir = Join-Path $Script:RepoRoot '.tools'
 $Script:PackagesDir = Join-Path (Join-Path $Script:RepoRoot 'TLM') 'packages'
+$Script:NuGetCacheDir = Join-Path $Script:ToolsDir 'nuget-cache'
 
 function Get-RepoRoot {
     return $Script:RepoRoot
@@ -61,6 +62,21 @@ function Get-PackagesDir {
     }
 
     return $Script:PackagesDir
+}
+
+function Ensure-NuGetEnvironment {
+    $packagesDir = Get-PackagesDir
+    if ([string]::IsNullOrWhiteSpace($env:NUGET_PACKAGES) -or $env:NUGET_PACKAGES -ne $packagesDir) {
+        $env:NUGET_PACKAGES = $packagesDir
+    }
+
+    if (-not (Test-Path $Script:NuGetCacheDir)) {
+        New-Item -Path $Script:NuGetCacheDir -ItemType Directory | Out-Null
+    }
+
+    if ([string]::IsNullOrWhiteSpace($env:NUGET_HTTP_CACHE_PATH) -or $env:NUGET_HTTP_CACHE_PATH -ne $Script:NuGetCacheDir) {
+        $env:NUGET_HTTP_CACHE_PATH = $Script:NuGetCacheDir
+    }
 }
 
 function Get-NuGetExePath {
@@ -121,6 +137,7 @@ function Invoke-NuGetRestore {
         Invoke-GitSubmoduleUpdate -Init
     }
 
+    Ensure-NuGetEnvironment
     $nugetExe = Ensure-NuGetExe
     $packagesDir = Get-PackagesDir
     $solutionDir = Split-Path -Parent $SolutionPath
@@ -185,9 +202,19 @@ function Invoke-MSBuild {
         throw "Solution '$SolutionPath' does not exist."
     }
 
+    Ensure-NuGetEnvironment
     $msbuild = Get-MSBuildPath
     Write-Host "[TMPE] Running MSBuild from '$msbuild'"
-    $args = @($SolutionPath, "/t:$Target", "/p:Configuration=$Configuration", '/m', "/v:$Verbosity")
+    $packagesDir = Get-PackagesDir
+    $args = @(
+        $SolutionPath,
+        "/t:$Target",
+        "/p:Configuration=$Configuration",
+        "/p:RestorePackagesPath=$packagesDir",
+        "/p:NuGetPackageRoot=$packagesDir",
+        '/m',
+        "/v:$Verbosity"
+    )
     $result = & $msbuild @args
     if ($LASTEXITCODE -ne 0) {
         throw 'MSBuild failed. Inspect the output above for details.'
